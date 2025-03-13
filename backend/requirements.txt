@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pymongo
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]  # 📌 Asegura que está esta línea
+python-multipart
+celery
+redis
+flower
+pytz
+requests
+dotenv
+pydantic[email]
+

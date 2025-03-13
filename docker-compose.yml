@@ -1,0 +1,86 @@
+services:
+  notification_watcher:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: watcher_osint
+    environment:
+      - MONGO_URI=mongodb://bpoway:79b89d2b2ce97ce8c36adca015bbcc66@mongodb:27017/osint_db
+      - EVOLUTION_API_KEY=39BC05AFF657-4467-B8AB-ADB51A1EED3D
+      - EVOLUTION_API_URL=https://triunoevolution.yosoytriuno.site
+    volumes:
+      - ./backend/app:/app
+    command: python utils/notification_watcher.py
+    networks:
+      - general_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend_osint
+    environment:
+      - PYTHONPATH=/app
+      - MONGO_URI=mongodb://bpoway:79b89d2b2ce97ce8c36adca015bbcc66@mongodb:27017/osint_db
+      - REDIS_URL=redis://redis:6379/0
+    working_dir: /app
+    volumes:
+      - ./backend/app:/app
+    ports:
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - general_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bpologica.rule=Host(`bpologica.bpoway.com`)"
+      - "traefik.http.routers.bpologica.entrypoints=websecure"
+      - "traefik.http.routers.bpologica.tls.certresolver=le"
+      - "traefik.http.services.bpologica.loadbalancer.server.port=8000"
+
+  paginas:
+    build:
+      context: ./paginas
+      dockerfile: Dockerfile
+    container_name: paginas_osint
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
+    working_dir: /app
+    volumes:
+      - ./paginas/app:/app
+    ports:
+      - "8001:8001"
+    command: celery -A celery_worker worker --loglevel=info
+    networks:
+      - general_network
+
+  worker:
+    build:
+      context: ./paginas
+      dockerfile: Dockerfile
+    container_name: celery_osint
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
+    working_dir: /app
+    depends_on:
+      - backend
+      - paginas
+    command: celery -A celery_worker worker --loglevel=info
+    networks:
+      - general_network
+
+  flower:
+    image: mher/flower
+    container_name: flower_osint
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    networks:
+      - general_network
+
+networks:
+  general_network:
+    external: true

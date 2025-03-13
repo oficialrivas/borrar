@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+celery
+redis
+playwright
+pymongo
+deepdiff
+requests
+pytz

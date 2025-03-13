@@ -1,0 +1,4 @@
+docker-compose up --build -d
+docker-compose down
+
+xvfb-run python interpolroja.py KESUMAWATI 
